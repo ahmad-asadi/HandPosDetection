@@ -1,9 +1,8 @@
 #include<iostream>
 #include<string>
 #include<fstream>
+#include<opencv2/opencv.hpp>
 
-#include"opencv2/highgui/highgui.hpp"
-#include"opencv2/imgproc/imgproc.hpp"
 
 
 using namespace std;
@@ -42,6 +41,8 @@ int main(int argc , char** argv)
 		cout << "video speed: " << video_speed <<endl;
 
 		namedWindow("Player", WINDOW_AUTOSIZE);	
+		namedWindow("Gray Level" , WINDOW_AUTOSIZE);
+		namedWindow("Canny", WINDOW_AUTOSIZE);
 
 		video.open(string(argv[1]));
 
@@ -49,12 +50,16 @@ int main(int argc , char** argv)
 
 		createTrackbar("Progress" , "Player" , &slider_position , frames_count, onTrackBarSlide) ;
 
-		Mat current_frame ; 
+		Mat current_frame, canny_frame, gray_frame ; 
 
 		while(1){
 				if(run != 0)
 				{
 					video >> current_frame;
+					
+					cvtColor(current_frame , gray_frame , COLOR_BGR2GRAY);
+
+					Canny(gray_frame, canny_frame, 10,100,3,true);
 					
 					if(!current_frame.data)
 							break;
@@ -63,6 +68,8 @@ int main(int argc , char** argv)
 					dont_set = 1 ;
 					setTrackbarPos("Progress", "Player" , current_position) ;
 					imshow("Player", current_frame);
+					imshow("Gray Level", gray_frame);
+					imshow("Canny", canny_frame);
 					run -= 1 ;
 				}
 				char user_order = (char) waitKey(video_speed) ;
