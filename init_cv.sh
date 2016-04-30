@@ -1,4 +1,4 @@
 #!/bin/bash
 
-alias cv='~/.compile_opencv_cpp' ;
+alias cv='./.compile_opencv_cpp' ;
 
