@@ -1,0 +1,2 @@
+/usr/bin/ar cr libEGF.a  CMakeFiles/EGF.dir/EGF/extract_gabor_filters.cpp.o
+/usr/bin/ranlib libEGF.a

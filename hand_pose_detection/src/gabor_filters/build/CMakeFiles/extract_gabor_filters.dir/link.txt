@@ -1,0 +1,2 @@
+/usr/bin/ar cr libextract_gabor_filters.a  CMakeFiles/extract_gabor_filters.dir/EGF/extract_gabor_filters.cpp.o
+/usr/bin/ranlib libextract_gabor_filters.a
