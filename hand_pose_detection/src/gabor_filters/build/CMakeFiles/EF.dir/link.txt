@@ -1,2 +1,0 @@
-/usr/bin/ar cr libEF.a  CMakeFiles/EF.dir/EF/extract_features.cpp.o
-/usr/bin/ranlib libEF.a

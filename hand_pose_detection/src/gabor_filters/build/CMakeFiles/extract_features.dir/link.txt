@@ -1,2 +1,0 @@
-/usr/bin/ar cr libextract_features.a  CMakeFiles/extract_features.dir/EF/extract_features.cpp.o
-/usr/bin/ranlib libextract_features.a

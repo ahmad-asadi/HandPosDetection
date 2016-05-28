@@ -10,9 +10,49 @@
 using namespace std;
 using namespace cv;
 
+/////////////
+const int MAX_IM_SIZE = 800;
+
+/////////////
+
+Mat convert_color_space(Mat input)
+{
+	cout << "converting color space"<<endl;
+	cvtColor(input, input, CV_BGR2YCrCb);
+	input *= float(1)/255;
+
+	return input ;
+}
+
+Mat down_sample(Mat input_src, int max_size)
+{
+	cout << "displaying input image" <<endl;
+	imshow("input" , input_src);
+
+	cout << "input downsampling ..." <<endl ;
+	cout << "input_src size = " << input_src.rows << " * " << input_src.cols <<endl ;
+	Mat input = input_src  ;
+	while(input.rows > max_size || input.cols > max_size)
+	{
+		pyrDown(input_src,input,Size(input_src.cols/2,input_src.rows/2));
+		input_src = input ;
+	}
+
+	return input;
+}
+
 Mat extract_gabor_filters(Mat input)
 {
+	cout << "Extracting Gabor Responses..." << endl ;
 	clock_t start_time,stop_time;
+
+	Mat input = down_sample(input_src,MAX_IM_SIZE);
+
+	cout << "downsampled input size = " << input.rows << " * " << input.cols <<endl ;
+	namedWindow("input" , WINDOW_NORMAL);
+	imshow("input" , input) ;
+
+	input = convert_color_space(input);
 
 	cout << "starting chronometer..." << endl;
 	start_time = clock() ;
