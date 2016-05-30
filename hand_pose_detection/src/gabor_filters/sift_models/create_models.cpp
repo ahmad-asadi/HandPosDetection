@@ -1,5 +1,6 @@
 #include <iostream>
-#include <string.h>
+#include <string>
+#include <sstream>
 
 #include <dirent.h>
 #include <fstream>
@@ -19,7 +20,9 @@ using namespace cv;
 ///////////////////////
 void analyze_dataset(char* dir_name) ;
 void print_keypoints(std::vector<KeyPoint> keypoints);
-void write_keypoints(std::vector<KeyPoint> keypoints);
+void write_descriptors(std::vector<Mat> descs);
+void compute_sift_points();
+int check_keypoints_file_existance();
 
 ///////////////////////
 struct training_pair
@@ -28,12 +31,13 @@ struct training_pair
 	char file_name[120];
 };
 ///////////////////////
-const char * KEYPOINTS_OUT_FILE_ADDR = "./.keypoints";
+const char * KEYPOINTS_OUT_FILE_ADDR = "../../sift_descriptors/";
 const int DEBUG = 0;
 
 ///////////////////////
 std::vector<training_pair> train_entity;
-void compute_sift_points();
+std::vector<Mat> _descriptors;
+
 ///////////////////////
 int main(int argc, char ** argv)
 {
@@ -47,7 +51,20 @@ int main(int argc, char ** argv)
 	}
 
 	analyze_dataset(dir_name);
+
+	// if((DEBUG||!check_keypoints_file_existance()))
 	compute_sift_points();
+
+	write_descriptors(_descriptors);
+}
+
+int check_keypoints_file_existance()
+{
+	cout << "checking existance of a .keypoints file..." <<endl;
+	FILE* f = fopen(KEYPOINTS_OUT_FILE_ADDR, "r");
+	int res = f != NULL ;
+	cout << "file " << (res ? "exists" : "does not exist. Going to generate it...") <<endl;
+	return res;
 }
 
 void analyze_dataset(char* dir_name)
@@ -104,20 +121,40 @@ void compute_sift_points()
 		cout << "loading image " << train_entity.at(i).file_name <<endl;
 		Mat image = imread(train_entity.at(i).file_name);
 		image = extract_gabor_filters(image) ;
-		std::vector<KeyPoint> keypoints = extract_sift_keypoints(image);
+
+		Mat channels [3] ;
+		split(image , channels) ;
+		std::vector<KeyPoint> keypoints = extract_sift_keypoints(channels[0]);
 		if(DEBUG)
 			print_keypoints(keypoints);
 
-		write_keypoints(keypoints);
+		Mat descriptor = compute_descriptors(channels[0] , keypoints);
+
+		_descriptors.push_back(descriptor);
+
+		if(DEBUG)
+		{
+			imshow("descriptor" , descriptor);
+			moveWindow("descriptor" , 500,500);
+			waitKey(0);
+		}
 	}
 }
 
-void write_keypoints(std::vector<KeyPoint> keypoints)
+void write_descriptors(vector<Mat> descriptors)
 {
-	ofstream outfile ;
-	outfile.open(KEYPOINTS_OUT_FILE_ADDR, ios::out|ios::binary|ios::app);
-	outfile.write((char *) (&keypoints), sizeof(keypoints));
-	outfile.close();
+	char * file_name ;
+	for(int i = 0 ; i < descriptors.size() ; i++)
+	{
+		Mat image_descriptor = descriptors.at(i) ;
+		stringstream file_name;
+		file_name << KEYPOINTS_OUT_FILE_ADDR << "model_" << i << ".png" ;
+
+		cout << "writing in file: " << file_name.str() << endl;
+		// strcpy(file_name, KEYPOINTS_OUT_FILE_ADDR);
+		// strcat(file_name, strcat("model_" , strcat(to_string(i).c_str(),".png"))) ;
+		imwrite(file_name.str(), image_descriptor);
+	}
 }
 
 void print_keypoints(std::vector<KeyPoint> keypoints)
