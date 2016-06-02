@@ -17,6 +17,12 @@ fstream
 -
 dirent.h
 -
+string.h
+-
+algorithm
+-
+vector
+-
 opencv2/core/core.hpp
 /home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/EF/opencv2/core/core.hpp
 opencv2/features2d/features2d.hpp

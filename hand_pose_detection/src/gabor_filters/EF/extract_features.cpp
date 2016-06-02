@@ -4,16 +4,29 @@
 Mat threshold_and_convert(Mat image);
 
 /////////////////////////////////////////
-const int DEBUG = 0;
+const int DEBUG = 1;
 const char* LEARNT_KEYPOINTS_MODEL_FILE	= "../sift_descriptors/" ;
+const int KNN = 2;
+
 /////////////////////////////////////////
-std::vector<Mat> descriptors ;
+struct training_pair
+{
+	int label;
+	char file_name[128];
+	char descriptor_file[256];
+	Mat descriptor;
+};
+
+/////////////////////////////////////////
+const char * TRAIN_ENTITY_FILE_NAME = "./.trainmodel";
+std::vector<training_pair> train_entity;
+std::vector<int> class_labels;
 
 /////////////////////////////////////////
 void extract_features(Mat image, double* features)
 {
 
-	if(descriptors.size() == 0)
+	if(train_entity.size() == 0)
 		load_sift_models();
 
 	Mat channels [3] ;
@@ -24,55 +37,108 @@ void extract_features(Mat image, double* features)
 
 	Mat extracted_descriptor = compute_descriptors(channels[0], extracted_keypoints);
 
-	std::vector<double> sift_scores = compare_sift_descriptors(extracted_descriptor) ;
+	if(DEBUG)
+	{
+		imshow("img extracted sift descriptor", extracted_descriptor);
+		moveWindow("img extracted sift descriptor" , 500,100);
+		waitKey(0);
+	}
+
+	compare_sift_descriptors(extracted_descriptor, KNN) ;
+
 	// extract_hog_features(image);
 }
 
 
-std::vector<double> compare_sift_descriptors(Mat img_descriptor)
+int compare_sift_descriptors(Mat img_descriptor, int knn)
 {
 	FlannBasedMatcher matcher;
 
 	std::vector<double> scores;
 
-	cout << "Comparing extracted sift detectors with thoese of trained models..." << endl ;
-	for(int i = 0 ; i < descriptors.size() ; i++)
+	double *knn_scores = new double[knn] ;
+	int *knn_labels = new int[knn] ;
+
+	for(int i = 0 ; i < knn ; i++)
 	{
-		cout << "model " << i << "\t" << endl ;
+		knn_scores[i] = 0 ;
+		knn_labels[i] = 0 ;
+	}	
+
+	cout << "Comparing extracted sift detectors with thoese of trained models..." << endl ;
+	for(int i = 0 ; i < train_entity.size() ; i++)
+	{
+		cout << "model " << i << ">>\t"  ;
 		
-		Mat model_descriptor = descriptors.at(i) ;
+		Mat model_descriptor = train_entity.at(i).descriptor ;
   		std::vector< DMatch > matches;
 
-		// imshow("model_desc", model_descriptor) ;
-		// moveWindow("model_desc" , 100 , 100);
-		// imshow("img_desc" , img_descriptor) ;
-		// moveWindow("model_desc" , 500 , 100) ;
+		if(model_descriptor.type() != CV_32F)
+			model_descriptor.convertTo(model_descriptor, CV_32F);
+		if(img_descriptor.type() != CV_32F)
+			img_descriptor.convertTo(img_descriptor, CV_32F);
 
-  		model_descriptor.convertTo(model_descriptor, CV_32F);
-  		cout << "model: " << model_descriptor.type() << endl;
-  		cout << "img: " << img_descriptor.type() << endl;
-
-		waitKey(0);
 
   		matcher.match( img_descriptor, model_descriptor, matches);
 
   		double avg = 0 ;
   		for(int j = 0 ; j < matches.size() ; j++)
-  			avg += matches.at(i).distance;
+  			avg += pow(matches.at(i).distance,2);
   		avg = avg / matches.size();
-  		double score = 100 * exp(-pow(avg,2)) ;
+  		double score ;
+  		// score = 100 * exp(-pow(avg,2)) ;
+  		score = avg ;
   		scores.push_back(score) ;
 
-  		cout << "score: " << score ;
+  		cout << "score: " << score << endl;
+
+  		int j = 0 ;
+  		while(j < knn && knn_scores[j] > score)
+  			j ++ ;
+
+  		if(j < knn)
+  		{
+  			for (int k = knn - 1; k > j ; k--)
+  			{
+  				knn_scores[k] = knn_scores[k-1];
+  				knn_labels[k] = knn_labels[k-1];
+  			}
+  			knn_scores[j] = score;
+  			knn_labels[j] = train_entity.at(i).label;
+  		}
 	}
+
+	cout << "***********************************" << endl;
+	cout << "KNN results for k = " << knn << ":" << endl;
+	for(int i = 0 ; i < knn ; i ++)
+		cout << (i+1) << ") score: " << knn_scores[i] << ", label:" << knn_labels[i] << endl;
 }
 
 void load_sift_models()
 {
 
+	// cout << "loading trained model map..." << endl;
+	// ifstream infile ;
+	// infile.open(TRAIN_ENTITY_FILE_NAME, ios::in|ios::binary);
+	// infile.read((char*)&train_entity, sizeof(train_entity));
+	// infile.close();
+
+	// cout << "existing train train_entities: " << train_entity.size() << endl ;
+
+	// for(int i = 0 ; i < train_entity.size() ; i++)
+	// {
+	// 	imshow("descriptor", train_entity.at(i).descriptor);
+	// 	waitKey(0);
+	// }
+
+	// for(int i = 0 ; i < train_entity.size() ; i++)
+	// {
+	// 	Mat dsc = imread(train_entity.at(i).descriptor_file);
+	// 	cvtColor(dsc, dsc, CV_BGR2GRAY);
+	// 	descriptors.push_back(dsc);
+	// }
+
 	cout << "loading learnt sift models..." << endl ;
-
-
 	DIR *dir ;
 	struct dirent *ent;
 	if ((dir = opendir (LEARNT_KEYPOINTS_MODEL_FILE)) != NULL) {
@@ -86,7 +152,20 @@ void load_sift_models()
 	    	cout << "reading file: " << full_path << endl;
 	    	Mat descriptor = imread(full_path);
 	    	cvtColor(descriptor,descriptor, CV_BGR2GRAY);
-	    	descriptors.push_back(descriptor);
+//	    	descriptors.push_back(descriptor);
+	    	training_pair train_ent;
+	    	string str (full_path) ;
+	    	int slash_index = str.find_last_of("/");
+	    	int underline_index = (str.substr(slash_index)).find("_");
+	    	train_ent.label = atoi((str.substr(slash_index+1, underline_index - 1)).c_str());
+	    	train_ent.descriptor = descriptor;
+	    	train_entity.push_back(train_ent);
+
+	    	std::vector<int>::iterator it = find(class_labels.begin(), class_labels.end(), train_ent.label);
+	    	if(it == class_labels.end())
+	    		class_labels.push_back(train_ent.label);
+
+	    	cout << "full_path: " << full_path << ", label: " << train_ent.label << endl ;
   		}
   		closedir (dir);
 	} else {
@@ -94,7 +173,8 @@ void load_sift_models()
   		exit(-1);
 	}
 
-	cout << "number of detected descriptors: " << descriptors.size() <<endl;
+	cout << "number of detected descriptors: " << train_entity.size()
+		 << ", number of detected classes: " << class_labels.size() <<endl;
 
 }
 
@@ -104,7 +184,7 @@ std::vector<KeyPoint> extract_sift_keypoints(Mat image)
 
 	image = threshold_and_convert(image);
 
-	SurfFeatureDetector detector(400);
+	SiftFeatureDetector detector;
     vector<KeyPoint> keypoints;
     detector.detect(image, keypoints);
 

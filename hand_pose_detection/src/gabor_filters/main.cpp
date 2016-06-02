@@ -48,19 +48,19 @@ int main(int argc , char** argv)
 	Mat gray_gabor_response;
 	cvtColor(gabor_response, gray_gabor_response, CV_RGB2GRAY);
 	extract_features(gray_gabor_response, features);
-	waitKey(0);
+	//	waitKey(0);
 
-	cout << "features 1..." << endl ;
-	extract_features(channels[0], features);
-	waitKey(0);
+	// cout << "features 1..." << endl ;
+	// extract_features(channels[0], features);
+	// waitKey(0);
 
-	cout << "features 2..." << endl ;
-	extract_features(channels[1], features);
-	waitKey(0);
+	// cout << "features 2..." << endl ;
+	// extract_features(channels[1], features);
+	// waitKey(0);
 
-	cout << "features 3..." << endl ;
-	extract_features(channels[2], features);
-	waitKey(0);
+	// cout << "features 3..." << endl ;
+	// extract_features(channels[2], features);
+	// waitKey(0);
 	return 0;
 }
 

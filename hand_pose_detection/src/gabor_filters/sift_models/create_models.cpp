@@ -20,7 +20,7 @@ using namespace cv;
 ///////////////////////
 void analyze_dataset(char* dir_name) ;
 void print_keypoints(std::vector<KeyPoint> keypoints);
-void write_descriptors(std::vector<Mat> descs);
+void write_descriptors();
 void compute_sift_points();
 int check_keypoints_file_existance();
 
@@ -28,15 +28,19 @@ int check_keypoints_file_existance();
 struct training_pair
 {
 	int label;
-	char file_name[120];
+	char file_name[128];
+	char descriptor_file[256];
+	Mat descriptor;
 };
 ///////////////////////
 const char * KEYPOINTS_OUT_FILE_ADDR = "../../sift_descriptors/";
+const char * TRAINING_ENTITIES_FILE_NAME = "./.trainmodel";
+
 const int DEBUG = 0;
 
 ///////////////////////
-std::vector<training_pair> train_entity;
-std::vector<Mat> _descriptors;
+std::vector<training_pair> training_entities;
+//std::vector<Mat> _descriptors;
 
 ///////////////////////
 int main(int argc, char ** argv)
@@ -55,7 +59,7 @@ int main(int argc, char ** argv)
 	// if((DEBUG||!check_keypoints_file_existance()))
 	compute_sift_points();
 
-	write_descriptors(_descriptors);
+	write_descriptors();
 }
 
 int check_keypoints_file_existance()
@@ -96,8 +100,8 @@ void analyze_dataset(char* dir_name)
 	    			strcpy(train_ent.file_name , full_path) ;
 	    			strcat(train_ent.file_name , "/") ;
 	    			strcat(train_ent.file_name , subent->d_name) ;
-	    			train_entity.push_back(train_ent) ;
-	    			cout << "\t" << image_counter << ") Image: " << train_ent.file_name << ", Class_Label: " << train_ent.label << ", appended entities:" << train_entity.size()<<endl ;
+	    			training_entities.push_back(train_ent) ;
+	    			cout << "\t" << image_counter << ") Image: " << train_ent.file_name << ", Class_Label: " << train_ent.label << ", appended entities:" << training_entities.size()<<endl ;
 	    		}
 	    		cout << "**************************" << endl;
 	    	}
@@ -116,10 +120,10 @@ void compute_sift_points()
 {
 	cout << "Analyzing train images..." << endl;
 
-	for(int i = 0 ; i < train_entity.size() ; i++)
+	for(int i = 0 ; i < training_entities.size() ; i++)
 	{
-		cout << "loading image " << train_entity.at(i).file_name <<endl;
-		Mat image = imread(train_entity.at(i).file_name);
+		cout << "loading image " << training_entities.at(i).file_name <<endl;
+		Mat image = imread(training_entities.at(i).file_name);
 		image = extract_gabor_filters(image) ;
 
 		Mat channels [3] ;
@@ -130,7 +134,8 @@ void compute_sift_points()
 
 		Mat descriptor = compute_descriptors(channels[0] , keypoints);
 
-		_descriptors.push_back(descriptor);
+//		_descriptors.push_back(descriptor);
+		training_entities.at(i).descriptor = descriptor;
 
 		if(DEBUG)
 		{
@@ -141,14 +146,19 @@ void compute_sift_points()
 	}
 }
 
-void write_descriptors(vector<Mat> descriptors)
+void write_descriptors()
 {
+	// ofstream output;
+	// output.open(TRAINING_ENTITIES_FILE_NAME, ios::out|ios::binary|ios::app);
+	// output.write((char*)&training_entities, sizeof(training_entities));
+	// output.close();
+
 	char * file_name ;
-	for(int i = 0 ; i < descriptors.size() ; i++)
+	for(int i = 0 ; i < training_entities.size() ; i++)
 	{
-		Mat image_descriptor = descriptors.at(i) ;
+		Mat image_descriptor = (training_entities.at(i)).descriptor ;
 		stringstream file_name;
-		file_name << KEYPOINTS_OUT_FILE_ADDR << "model_" << i << ".png" ;
+		file_name << KEYPOINTS_OUT_FILE_ADDR << training_entities.at(i).label <<"_model_" << i << ".png" ;
 
 		cout << "writing in file: " << file_name.str() << endl;
 		// strcpy(file_name, KEYPOINTS_OUT_FILE_ADDR);
