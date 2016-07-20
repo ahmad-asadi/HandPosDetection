@@ -35,6 +35,8 @@ opencv2/nonfree/nonfree.hpp
 /home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/EF/opencv2/nonfree/nonfree.hpp
 opencv2/imgproc/imgproc.hpp
 /home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/EF/opencv2/imgproc/imgproc.hpp
+opencv2/ml/ml.hpp
+/home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/EF/opencv2/ml/ml.hpp
 
 /home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/EGF/extract_gabor_filters.h
 opencv2/core.hpp
@@ -59,6 +61,8 @@ opencv2/imgproc.hpp
 /home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/sift_models/opencv2/imgproc.hpp
 opencv2/features2d.hpp
 /home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/sift_models/opencv2/features2d.hpp
+opencv2/ml/ml.hpp
+/home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/sift_models/opencv2/ml/ml.hpp
 ../EGF/extract_gabor_filters.h
 /home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/EGF/extract_gabor_filters.h
 ../EF/extract_features.h
@@ -201,6 +205,18 @@ opencv2/imgproc/types_c.h
 /usr/local/include/opencv2/imgproc/types_c.h
 opencv2/core/core_c.h
 /usr/local/include/opencv2/imgproc/opencv2/core/core_c.h
+
+/usr/local/include/opencv2/ml/ml.hpp
+opencv2/core/core.hpp
+/usr/local/include/opencv2/ml/opencv2/core/core.hpp
+limits.h
+-
+map
+-
+string
+-
+iostream
+-
 
 /usr/local/include/opencv2/nonfree/features2d.hpp
 opencv2/features2d/features2d.hpp

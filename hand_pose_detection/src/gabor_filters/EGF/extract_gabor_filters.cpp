@@ -12,7 +12,7 @@ using namespace cv;
 
 /////////////
 const int MAX_IM_SIZE = 800;
-
+const int DEBUG = 0 ;
 /////////////
 
 Mat convert_color_space(Mat input)
@@ -43,14 +43,14 @@ Mat extract_gabor_filters(Mat input)
 	cout << "Extracting Gabor Responses..." << endl ;
 	clock_t start_time,stop_time;
 
-	namedWindow("input" , WINDOW_NORMAL);
+	// namedWindow("input" , WINDOW_NORMAL);
 	cout << "displaying input image" <<endl;
-	imshow("input" , input);
+//	imshow("input" , input);
 
 	input = down_sample(input,MAX_IM_SIZE);
 
 	cout << "downsampled input size = " << input.rows << " * " << input.cols <<endl ;
-	imshow("input" , input) ;
+//	imshow("input" , input) ;
 
 	input = convert_color_space(input);
 
@@ -63,14 +63,16 @@ Mat extract_gabor_filters(Mat input)
 	double sig = 1, th = 0, lm = 1.0, gm = 1, ps = 1;
 	for (;th <= 180 ; th += 15)
 	{
-		cout <<"Theta:" << th << endl;
+		if(DEBUG)
+			cout <<"Theta:" << th << endl;
 		Mat kernel = getGaborKernel(Size(kernel_size, kernel_size), sig, th, lm, gm, ps);
 		Mat filtered_image ;
 		filter2D(input, filtered_image,  CV_32F, kernel);
 		addWeighted(weighted_sum_image, 0.5 , filtered_image , 0.5 , 0, weighted_sum_image , weighted_sum_image.type()) ;
 	}
 
-	medianBlur(weighted_sum_image, weighted_sum_image , 3);
+	for(int i = 0 ; i < 200 ; i++)
+		medianBlur(weighted_sum_image, weighted_sum_image , 3);
 	
 	cout << "stopping chronometer..." << endl;
 	stop_time = clock();

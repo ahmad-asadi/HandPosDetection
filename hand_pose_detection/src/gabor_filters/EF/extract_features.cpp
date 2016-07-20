@@ -2,9 +2,10 @@
 
 /////////////////////////////////////////
 Mat threshold_and_convert(Mat image);
+Mat loaded_dictionary ;
 
 /////////////////////////////////////////
-const int DEBUG = 1;
+const int DEBUG = 0;
 const char* LEARNT_KEYPOINTS_MODEL_FILE	= "../sift_descriptors/" ;
 const int KNN = 2;
 
@@ -21,33 +22,91 @@ struct training_pair
 const char * TRAIN_ENTITY_FILE_NAME = "./.trainmodel";
 std::vector<training_pair> train_entity;
 std::vector<int> class_labels;
-
+CvSVM svm ;
 /////////////////////////////////////////
-void extract_features(Mat image, double* features)
+int extract_features(Mat image)
 {
 
 	if(train_entity.size() == 0)
-		load_sift_models();
-
-	Mat channels [3] ;
-
-	split(image, channels);
-
-	std::vector<KeyPoint> extracted_keypoints = extract_sift_keypoints(channels[0]);
-
-	Mat extracted_descriptor = compute_descriptors(channels[0], extracted_keypoints);
-
-	if(DEBUG)
 	{
-		imshow("img extracted sift descriptor", extracted_descriptor);
-		moveWindow("img extracted sift descriptor" , 500,100);
-		waitKey(0);
+			load_sift_models();
+			load_dictionary();
+			load_SVM();
 	}
 
-	compare_sift_descriptors(extracted_descriptor, KNN) ;
+	// Mat channels [3] ;
+
+	// split(image, channels);
+
+	// Mat input_image = channels[0] ;
+	Mat input_image = image ;
+
+	// std::vector<KeyPoint> extracted_keypoints = extract_sift_keypoints(input_image);
+	std::vector<KeyPoint> extracted_keypoints = extract_sift_keypoints(input_image);
+
+	Mat extracted_descriptor = compute_descriptors(input_image, extracted_keypoints);
+
+	// if(DEBUG)
+	// {
+	// 	imshow("img extracted sift descriptor", extracted_descriptor);
+	// 	moveWindow("img extracted sift descriptor" , 500,100);
+	// 	waitKey(0);
+	// }
+
+	// compare_sift_descriptors(extracted_descriptor, KNN) ;
+
+////Mat image_BOF = get_image_BOF(rgb_image, extracted_keypoints, KNN) ;
 
 	// extract_hog_features(image);
+
+	cout << "calculating feature vector..." << endl ;
+
+	Mat feature_vector = extract_features_mat(extracted_descriptor);
+
+	float predicted_label = svm.predict(feature_vector);
+	cout << "PREDICTED LABEL IS: " << predicted_label << endl;
+	return predicted_label;
 }
+
+void load_SVM()
+{	
+	cout << "Loading trained SVM, please wait..." << endl ;
+
+	svm.load("../trained_svm") ;
+}
+
+Mat get_image_BOF(Mat image, std::vector<KeyPoint> extracted_keypoints, int KNN)
+{
+	cout << "Attempting to classify new image" << endl ;
+
+	cvtColor(image, image, CV_BGR2GRAY);
+	image.convertTo(image, CV_8U);
+
+	cout << "creating description matcher" << endl ;
+	Ptr<DescriptorMatcher> matcher (new FlannBasedMatcher()) ;
+
+	cout << "creating feature detector" << endl ;
+	Ptr<FeatureDetector> detector (new SiftFeatureDetector()) ;
+
+	cout << "creating descriptor extractor" << endl ;
+	Ptr<DescriptorExtractor> extractor (new SiftDescriptorExtractor()) ;
+
+	cout << "creating bag of words image descriptor extractor" << endl ;
+	BOWImgDescriptorExtractor bowDE(extractor, matcher) ;
+
+	cout << "setting vocabulary" << endl ;
+	bowDE.setVocabulary(loaded_dictionary) ;
+	cout << "keypoints size:" << extracted_keypoints.size() << endl ;
+
+	cout << "computing description matrix, image_type:" << image.type() << endl ;
+	Mat bowDescriptor ;
+	bowDE.compute(image, extracted_keypoints, bowDescriptor) ;
+
+	cout << "feature mat has been created successfully." << endl ;
+	imshow("bowDescriptor", bowDescriptor);
+	waitKey(0);
+
+} 
 
 
 int compare_sift_descriptors(Mat img_descriptor, int knn)
@@ -112,6 +171,24 @@ int compare_sift_descriptors(Mat img_descriptor, int knn)
 	cout << "KNN results for k = " << knn << ":" << endl;
 	for(int i = 0 ; i < knn ; i ++)
 		cout << (i+1) << ") score: " << knn_scores[i] << ", label:" << knn_labels[i] << endl;
+	cout << "comparing sift descriptors finished" << endl;
+}
+
+void load_dictionary()
+{
+	cout << "Loading trained loaded_dictionary, please wait..." << endl ;
+
+	stringstream file_name;
+	file_name << LEARNT_KEYPOINTS_MODEL_FILE << "../dictionary.yml" ;
+
+	cout << "Reading file " << file_name.str() << endl;
+	FileStorage fs(file_name.str(), FileStorage::READ) ;
+
+	fs["vocabulary"] >> loaded_dictionary ;
+
+	fs.release();
+
+	cout << "dictionary has been loaded successfully." << endl ;
 }
 
 void load_sift_models()
@@ -272,3 +349,83 @@ Mat compute_descriptors(Mat image, std::vector<KeyPoint> keypoints)
 	return descriptor;
 }
 
+Mat extract_features_mat(Mat descriptor)
+{
+		double feature_value[descriptor.cols] ;
+		double gamma = 0.05 ;
+
+		for(int j = 0 ; j < descriptor.cols ; j++)
+		{
+			feature_value[j] = 0 ;
+			for(int h = 0 ; h < descriptor.rows ; h++)
+			{
+				double to_be_added_value = (descriptor.at<double>(h,j)/pow(10,15) ) ;
+				feature_value[j] += to_be_added_value;
+
+				if(feature_value[j] > 1)
+					feature_value[j] = 1 ;
+			}	
+		}
+
+
+		for(int j = 0 ; j < descriptor.cols ; j++)
+		{
+			if(feature_value[j] < 0 )
+				feature_value[j] = 0 ;
+
+			feature_value[j] = 128 * pow(feature_value[j],gamma) ;
+			if(DEBUG)
+				cout << "feature_value "<< j<<": " << feature_value[j] << endl ; 
+		}
+
+		// double sum = 0 ;
+		// for(int j = 0 ; j < descriptor.cols ; j++)
+		// 	sum += feature_value[j] ;
+		// for(int j = 0 ; j < descriptor.cols ; j++)
+		// {
+		// 	feature_value[j] /= sum ;
+		// 	feature_value[j] *= 128  ;
+		// }
+
+		Mat result (1,descriptor.cols, CV_32FC1, feature_value) ;
+		
+		if(DEBUG)
+			draw_image_histogram(result, 0 , 128) ;
+
+		return result ;
+}
+
+void draw_image_histogram(Mat image, double min, double max)
+{
+	int hist_size = image.cols ;
+	float range[] = {0, max} ;
+	const float * hist_range = {range} ;
+	bool uniform = true ; 
+	bool accumulate = false ;
+
+	Mat hist ;
+	calcHist( &image, 1, 0, Mat(), hist, 1, &hist_size, &hist_range, uniform, accumulate );
+
+	int hist_w = 512; int hist_h = 400;
+	int bin_w = cvRound( (double) hist_w/hist_size );
+
+  	Mat hist_image( hist_h, hist_w, CV_8UC3, Scalar( 0,0,0) );	
+
+  	normalize(hist, hist, 0, hist_image.rows, NORM_MINMAX, -1, Mat() );
+
+  	for( int i = 1; i < hist_size; i++ )
+  	{
+    	line( hist_image, Point( bin_w*(i-1), hist_h - cvRound(hist.at<float>(i-1)) ) ,
+                       Point( bin_w*(i), hist_h - cvRound(hist.at<float>(i)) ),
+                       Scalar( 255, 0, 0), 2, 8, 0  );
+    	line( hist_image, Point( bin_w*(i-1), hist_h - cvRound(image.at<float>(i-1)) ) ,
+                       Point( bin_w*(i), hist_h - cvRound(image.at<float>(i)) ),
+                       Scalar( 0, 0, 255), 2, 8, 0  );
+	}
+
+	namedWindow("histogram of features", CV_WINDOW_AUTOSIZE );
+  	imshow("histogram of features", hist_image );
+  	waitKey(0);
+
+ 
+}

@@ -9,6 +9,7 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
+#include "opencv2/ml/ml.hpp"
 
 #include "../EGF/extract_gabor_filters.h"
 #include "../EF/extract_features.h"
@@ -22,7 +23,9 @@ void analyze_dataset(char* dir_name) ;
 void print_keypoints(std::vector<KeyPoint> keypoints);
 void write_descriptors();
 void compute_sift_points();
+void construct_BOW_kmeans(int dictionary_size, int iteration_count, float error_rate, int retries);
 int check_keypoints_file_existance();
+void train_svm(int iteration_count, float error_rate);
 
 ///////////////////////
 struct training_pair
@@ -37,9 +40,17 @@ const char * KEYPOINTS_OUT_FILE_ADDR = "../../sift_descriptors/";
 const char * TRAINING_ENTITIES_FILE_NAME = "./.trainmodel";
 
 const int DEBUG = 0;
-
+const int dictionary_size = 200;
+const int iteration_count = 100;
+const float error_rate = 1e-15;
+const int retries = 1;
 ///////////////////////
 std::vector<training_pair> training_entities;
+Mat dictionary;
+std::vector<double> labels_mat;
+Mat training_data_mat ;
+
+CvSVM training_svm;
 //std::vector<Mat> _descriptors;
 
 ///////////////////////
@@ -59,7 +70,70 @@ int main(int argc, char ** argv)
 	// if((DEBUG||!check_keypoints_file_existance()))
 	compute_sift_points();
 
+//	construct_BOW_kmeans(dictionary_size,iteration_count,error_rate,retries);
+
+	train_svm(iteration_count, error_rate);
+
+	cout << "Saving trained training_svm model to ../../trained_svm file..." << endl ; 
+	training_svm.save("../../trained_svm");
+
+	cout << "Clustering has been finished successfully." << endl ;
+
+	for(int i = 0 ; i < labels_mat.size() ; i++)
+		cout << "label " << i << ": " << labels_mat.at(i) << endl ;
 	write_descriptors();
+}
+
+void train_svm(int iteration_count, float error_rate)
+{
+	cout << "Start training\nsettting parametres..." << endl ;
+	CvSVMParams params ;
+	params.svm_type = CvSVM::C_SVC ;
+	params.kernel_type = CvSVM::RBF ;
+	params.gamma = 3 ; 
+	params.C = 0.1 ;
+	params.degree = 3 ;
+	params.nu = 0.9 ;
+	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, iteration_count, error_rate);
+
+	cout << "Creating labels mat for training..." << endl ;
+	int labels_list[labels_mat.size()];
+	for(int i = 0 ; i < labels_mat.size() ; i++)
+	{
+		labels_list[i] = labels_mat.at(i);
+		cout << "final label" << labels_list[i] << endl ;
+	}
+	Mat training_labels_mat(labels_mat.size() , 1 , CV_32S , labels_list) ;
+
+	cout << "Training has been started..." << endl;
+	training_svm.train(training_data_mat, training_labels_mat, Mat(), Mat(), params);
+
+	cout << "****************************************" << endl ;
+	cout << "training has been finished successfully." << endl ;
+	cout << "the number of support vectors: " << training_svm.get_support_vector_count() << endl ;
+	cout << "****************************************" << endl ;
+
+	int thickness = -1 ;
+	int line_type = 8 ;
+
+	Mat image = Mat::zeros(512,512,CV_8UC3);
+	for(int i = 0 ; i < training_svm.get_support_vector_count() ; i++)
+	{
+		const float * v = training_svm.get_support_vector(i) ;
+		circle(image, Point((int)v[0],(int)v[1]), 6 , Scalar(128,128,128), thickness, line_type) ;
+		// cout << "V = { " ;
+		// for (int j = 1 ; j < 128 ; j++)
+		// 	cout << v[j] <<", " ;
+
+		// cout  << "}" << endl ;  
+	}
+	imshow("svm_output",image);
+	moveWindow("svm_output" , 100 , 100);
+	waitKey(0);
+
+	imwrite("../../training_data.png" , training_data_mat) ;
+	imwrite("../../training_labels.png" , training_labels_mat) ;
+
 }
 
 int check_keypoints_file_existance()
@@ -114,6 +188,7 @@ void analyze_dataset(char* dir_name)
   		cout << "Entered address does not exist: \"" << dir_name << "\"" ;
   		exit(-1);
 	}
+
 }
 
 void compute_sift_points()
@@ -143,8 +218,44 @@ void compute_sift_points()
 			moveWindow("descriptor" , 500,500);
 			waitKey(0);
 		}
+
+		//Add descriptor to the dictionary
+		dictionary.push_back(descriptor) ;
+		cout << "calculating feature vector..." << endl ;
+		training_data_mat.push_back(extract_features_mat(descriptor)) ;
+		labels_mat.push_back(training_entities.at(i).label);
+
 	}
+
 }
+
+void construct_BOW_kmeans(int dictionary_size, int iteration_count, float error_rate, int retries)
+{
+	cout << "Constructing BOW_Kmeans for training images\ninitializing parameters..." << endl ;
+
+	TermCriteria term_criteria(CV_TERMCRIT_ITER, iteration_count, error_rate) ;
+
+	int flags = KMEANS_PP_CENTERS ; 
+
+	cout << "Constructing kmeans trainer..." << endl ;
+	BOWKMeansTrainer kmeans_trainer(dictionary_size, term_criteria, retries, flags) ;
+
+	cout << "Clustering training images..." << endl ;
+	dictionary = kmeans_trainer.cluster(dictionary) ;
+
+	stringstream file_name;
+	file_name << KEYPOINTS_OUT_FILE_ADDR << "../dictionary.yml" ;
+
+	cout << "Creating output stream..." << endl ; 
+	FileStorage fs(file_name.str(), FileStorage::WRITE) ;
+
+	cout << "Writing dictionary to " << file_name.str() << " file..." << endl ;
+	fs << "vocabulary" << dictionary ;
+
+	fs.release() ;
+
+}
+
 
 void write_descriptors()
 {
