@@ -203,8 +203,18 @@ void compute_sift_points()
 
 		//Add descriptor to the dictionary
 		dictionary.push_back(descriptor) ;
+		channels[0]*=255;
+		Mat gray_channel(channels[0].size(), CV_8UC1) ;
+		channels[0].convertTo(gray_channel,CV_8UC1) ;
+		cout << "calculating hog features..."<< endl ;
+
+    	Mat sub_mat = Mat::ones(gray_channel.size(), gray_channel.type())*255;
+	    subtract(sub_mat, gray_channel, gray_channel);
+
+
+		std::vector<float> hog_ders = extract_hog_features(gray_channel);
 		cout << "calculating feature vector..." << endl ;
-		training_data_mat.push_back(extract_features_mat(descriptor)) ;
+		training_data_mat.push_back(extract_features_mat(descriptor,hog_ders)) ;
 		labels_mat.push_back(training_entities.at(i).label);
 
 	}

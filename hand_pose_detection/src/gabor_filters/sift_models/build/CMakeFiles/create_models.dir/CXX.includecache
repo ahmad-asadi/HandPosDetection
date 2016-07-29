@@ -35,6 +35,8 @@ opencv2/nonfree/nonfree.hpp
 /home/ahmad/Programs/Programming/Workspace/Vision/hand_pose_detection/src/gabor_filters/EF/opencv2/nonfree/nonfree.hpp
 opencv2/imgproc/imgproc.hpp
 /home/ahmad/Programs/Programming/Workspace/Vision/hand_pose_detection/src/gabor_filters/EF/opencv2/imgproc/imgproc.hpp
+opencv2/objdetect/objdetect.hpp
+/home/ahmad/Programs/Programming/Workspace/Vision/hand_pose_detection/src/gabor_filters/EF/opencv2/objdetect/objdetect.hpp
 opencv2/ml/ml.hpp
 /home/ahmad/Programs/Programming/Workspace/Vision/hand_pose_detection/src/gabor_filters/EF/opencv2/ml/ml.hpp
 

@@ -38,8 +38,16 @@ int extract_features(Mat image)
 	std::vector<KeyPoint> extracted_keypoints = extract_sift_keypoints(input_image);
 	Mat extracted_descriptor = compute_descriptors(input_image, extracted_keypoints);
 
+	image *= 255;
+	Mat gray_channel(image.size(), CV_8UC1) ;
+	image.convertTo(gray_channel,CV_8UC1) ;
+
+    Mat sub_mat = Mat::ones(gray_channel.size(), gray_channel.type())*255;
+    subtract(sub_mat, gray_channel, gray_channel);
+
+	std::vector<float> hog_ders = extract_hog_features(gray_channel);
 	cout << "calculating feature vector..." << endl ;
-	Mat feature_vector = extract_features_mat(extracted_descriptor);
+	Mat feature_vector = extract_features_mat(extracted_descriptor, hog_ders);
 
 	float predicted_label = svm.predict(feature_vector);
 	cout << "PREDICTED LABEL IS: " << predicted_label << endl;
@@ -158,9 +166,9 @@ Mat compute_descriptors(Mat image, std::vector<KeyPoint> keypoints)
 	return descriptor;
 }
 
-Mat extract_features_mat(Mat descriptor)
+Mat extract_features_mat(Mat descriptor, std::vector<float> hog_ders)
 {
-		double feature_value[descriptor.cols] ;
+		double feature_value[descriptor.cols + hog_ders.size()] ;
 		double gamma = 0.05 ;
 
 		for(int j = 0 ; j < descriptor.cols ; j++)
@@ -186,6 +194,9 @@ Mat extract_features_mat(Mat descriptor)
 			if(DEBUG)
 				cout << "feature_value "<< j<<": " << feature_value[j] << endl ; 
 		}
+
+		for(int j = descriptor.cols ; j < descriptor.cols + hog_ders.size() ; j++)
+			feature_value[j] = 128*pow(hog_ders.at(j - descriptor.cols),gamma) ;
 
 		Mat result (1,descriptor.cols, CV_32FC1, feature_value) ;
 		
@@ -228,4 +239,17 @@ void draw_image_histogram(Mat image, double min, double max)
   	waitKey(0);
 
  
+}
+
+std::vector<float> extract_hog_features(Mat image)
+{
+	HOGDescriptor hog ;
+	std::vector<float> ders;
+	std::vector<Point> locs;
+
+
+	hog.compute(image,ders,Size(0,0),Size(0,4),locs);
+	cout << "ders.size: " << ders.size() << endl ;
+
+	return ders ;
 }
