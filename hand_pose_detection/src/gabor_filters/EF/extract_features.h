@@ -20,10 +20,7 @@ using namespace cv;
 
 int extract_features(Mat image);
 std::vector<KeyPoint> extract_sift_keypoints(Mat image);
-void extract_hog_features(Mat image);
-void load_sift_models();
 Mat compute_descriptors(Mat image, std::vector<KeyPoint> keypoints);
-int compare_sift_descriptors(Mat img_descriptor, int knn);
 void load_dictionary();
 Mat get_image_BOF(Mat input_image, std::vector<KeyPoint> extracted_keypoints, int KNN) ;
 void load_SVM() ;

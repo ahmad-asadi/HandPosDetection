@@ -5,10 +5,10 @@
 #include <dirent.h>
 #include <fstream>
 
-#include "opencv2/core.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/features2d.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/features2d/features2d.hpp"
 #include "opencv2/ml/ml.hpp"
 
 #include "../EGF/extract_gabor_filters.h"
@@ -106,30 +106,12 @@ void train_svm(int iteration_count, float error_rate)
 	Mat training_labels_mat(labels_mat.size() , 1 , CV_32S , labels_list) ;
 
 	cout << "Training has been started..." << endl;
-	training_svm.train(training_data_mat, training_labels_mat, Mat(), Mat(), params);
+	training_svm.train_auto(training_data_mat, training_labels_mat, Mat(), Mat(), params);
 
 	cout << "****************************************" << endl ;
 	cout << "training has been finished successfully." << endl ;
 	cout << "the number of support vectors: " << training_svm.get_support_vector_count() << endl ;
 	cout << "****************************************" << endl ;
-
-	int thickness = -1 ;
-	int line_type = 8 ;
-
-	Mat image = Mat::zeros(512,512,CV_8UC3);
-	for(int i = 0 ; i < training_svm.get_support_vector_count() ; i++)
-	{
-		const float * v = training_svm.get_support_vector(i) ;
-		circle(image, Point((int)v[0],(int)v[1]), 6 , Scalar(128,128,128), thickness, line_type) ;
-		// cout << "V = { " ;
-		// for (int j = 1 ; j < 128 ; j++)
-		// 	cout << v[j] <<", " ;
-
-		// cout  << "}" << endl ;  
-	}
-	imshow("svm_output",image);
-	moveWindow("svm_output" , 100 , 100);
-	waitKey(0);
 
 	imwrite("../../training_data.png" , training_data_mat) ;
 	imwrite("../../training_labels.png" , training_labels_mat) ;
@@ -259,10 +241,6 @@ void construct_BOW_kmeans(int dictionary_size, int iteration_count, float error_
 
 void write_descriptors()
 {
-	// ofstream output;
-	// output.open(TRAINING_ENTITIES_FILE_NAME, ios::out|ios::binary|ios::app);
-	// output.write((char*)&training_entities, sizeof(training_entities));
-	// output.close();
 
 	char * file_name ;
 	for(int i = 0 ; i < training_entities.size() ; i++)
@@ -272,8 +250,6 @@ void write_descriptors()
 		file_name << KEYPOINTS_OUT_FILE_ADDR << training_entities.at(i).label <<"_model_" << i << ".png" ;
 
 		cout << "writing in file: " << file_name.str() << endl;
-		// strcpy(file_name, KEYPOINTS_OUT_FILE_ADDR);
-		// strcat(file_name, strcat("model_" , strcat(to_string(i).c_str(),".png"))) ;
 		imwrite(file_name.str(), image_descriptor);
 	}
 }
