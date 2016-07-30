@@ -87,6 +87,13 @@ int main(int argc, char ** argv)
 void train_svm(int iteration_count, float error_rate)
 {
 	cout << "Start training\nsettting parametres..." << endl ;
+	CvParamGrid gamma_grid ;
+	gamma_grid.min_val = 0.000001 ;
+	gamma_grid.max_val = 110 ;
+	gamma_grid.step = 10 ;
+
+	int k_fold = 10 ;
+
 	CvSVMParams params ;
 	params.svm_type = CvSVM::C_SVC ;
 	params.kernel_type = CvSVM::RBF ;
@@ -105,8 +112,21 @@ void train_svm(int iteration_count, float error_rate)
 	}
 	Mat training_labels_mat(labels_mat.size() , 1 , CV_32S , labels_list) ;
 
+	cout << "Calculating PCA Projection..." << endl ;
+	PCA pca(training_data_mat, Mat(), CV_PCA_DATA_AS_ROW, 0.95) ;
+
+	cout << "training_data_mat.rows: " << training_data_mat.rows << ", training_data_mat.cols: " << training_data_mat.cols << endl ;
+	cout << "Projecting training vectors to eigen space..." << endl ;
+	Mat pca_training_data_mat = pca.project(training_data_mat) ; 
+	cout << "PCA.rows: " << pca_training_data_mat.rows << ", PCA.cols: " << pca_training_data_mat.cols << endl ;
+	cout << "PCA(0,0): " << pca_training_data_mat.at<float>(0,0) << endl ;
+	namedWindow("PCA",WINDOW_AUTOSIZE);
+	imshow("PCA" , pca_training_data_mat) ;
+	waitKey(0) ;
+
 	cout << "Training has been started..." << endl;
-	training_svm.train_auto(training_data_mat, training_labels_mat, Mat(), Mat(), params);
+	training_svm.train_auto(pca_training_data_mat, training_labels_mat, Mat(), Mat(), params, k_fold, CvSVM::get_default_grid(CvSVM::C), gamma_grid);
+	// training_svm.train_auto(training_data_mat, training_labels_mat, Mat(), Mat(), params, k_fold, CvSVM::get_default_grid(CvSVM::C), gamma_grid);
 
 	cout << "****************************************" << endl ;
 	cout << "training has been finished successfully." << endl ;

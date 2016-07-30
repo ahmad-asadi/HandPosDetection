@@ -168,7 +168,8 @@ Mat compute_descriptors(Mat image, std::vector<KeyPoint> keypoints)
 
 Mat extract_features_mat(Mat descriptor, std::vector<float> hog_ders)
 {
-		double feature_value[descriptor.cols + hog_ders.size()] ;
+		int feature_size = descriptor.cols + hog_ders.size() ;
+		double feature_value[feature_size] ;
 		double gamma = 0.05 ;
 
 		for(int j = 0 ; j < descriptor.cols ; j++)
@@ -187,18 +188,44 @@ Mat extract_features_mat(Mat descriptor, std::vector<float> hog_ders)
 
 		for(int j = 0 ; j < descriptor.cols ; j++)
 		{
-			if(feature_value[j] < 0 )
-				feature_value[j] = 0 ;
+			if(feature_value[j] < 0.1 )
+				feature_value[j] = 0.1 ;
 
 			feature_value[j] = 128 * pow(feature_value[j],gamma) ;
 			if(DEBUG)
 				cout << "feature_value "<< j<<": " << feature_value[j] << endl ; 
 		}
 
-		for(int j = descriptor.cols ; j < descriptor.cols + hog_ders.size() ; j++)
-			feature_value[j] = 128*pow(hog_ders.at(j - descriptor.cols),gamma) ;
+		// double max_hog = 0 , min_hog = 0 ;
+		// for(int j = descriptor.cols ; j < descriptor.cols + hog_ders.size() ; j++)
+		// {
+		// 	feature_value[j] = pow(hog_ders.at(j - descriptor.cols),gamma) ;
+		// 	if(feature_value[j] < 0.1 )
+		// 		feature_value[j] = 0.1 ;
+		// 	if(feature_value[j] < 0.1 )
+		// 		feature_value[j] = 0.1 ;
 
-		Mat result (1,descriptor.cols, CV_32FC1, feature_value) ;
+		// 	if(max_hog < feature_value[j])
+		// 		max_hog = feature_value[j] ;
+		// 	if(min_hog > feature_value[j])
+		// 		min_hog = feature_value[j] ;
+		// }	
+
+		// for(int j = descriptor.cols ; j < descriptor.cols + hog_ders.size() ; j++)
+		// {
+		// 	feature_value[j] = (feature_value[j]-min_hog)/(max_hog - min_hog) ;
+		// 	if(DEBUG)
+		// 		cout << "feature_value "<< j<<": " << feature_value[j] << endl ; 
+		// }	
+
+		for(int j = descriptor.cols ; j < descriptor.cols + hog_ders.size() ; j++)
+		{
+			feature_value[j] = hog_ders.at(j - descriptor.cols) ;
+			if(DEBUG)
+				cout << "feature_value "<< j<<": " << feature_value[j] << endl ; 
+		}	
+
+		Mat result (1,feature_size, CV_32FC1, feature_value) ;
 		
 		if(DEBUG)
 			draw_image_histogram(result, 0 , 128) ;
@@ -243,13 +270,67 @@ void draw_image_histogram(Mat image, double min, double max)
 
 std::vector<float> extract_hog_features(Mat image)
 {
-	HOGDescriptor hog ;
-	std::vector<float> ders;
-	std::vector<Point> locs;
+	return extract_oriented_histogram(image );
+
+	// HOGDescriptor hog ;
+	// std::vector<float> ders;
+	// std::vector<Point> locs;
 
 
-	hog.compute(image,ders,Size(0,0),Size(0,4),locs);
-	cout << "ders.size: " << ders.size() << endl ;
+	// hog.compute(image,ders,Size(0,0),Size(0,4),locs);
+	// cout << "ders.size: " << ders.size() << endl ;
 
-	return ders ;
+	// return ders ;
 }
+
+std::vector<float> extract_oriented_histogram(Mat image)
+{
+	std::vector<float> hist;
+	int total_horiz = 0 , total_vert = 0 ;
+	int threshold = 100 ;
+	int scale = 100 ;
+	for(int i = 0 ; i < image.rows ; i ++)
+	{
+		float hist_horiz = 0 ;
+
+		for(int j = 0 ; j < image.cols ; j++)
+			hist_horiz += ((int)image.at<uchar>(i,j)) > threshold ? 1 : 0 ;
+
+		hist.push_back(hist_horiz) ;
+		total_horiz += hist_horiz ;
+	}
+
+	for(int j = 0 ; j < image.cols ; j++)
+	{
+		float hist_vert = 0 ;
+
+		for(int i = 0 ; i < image.rows ; i++)
+			hist_vert += ((int)image.at<uchar>(i,j)) > threshold ? 1 : 0 ;
+
+		hist.push_back(hist_vert) ;
+		total_vert += hist_vert ;
+	}
+///////////
+	for(int i = 0 ; i < image.rows ; i++)
+	{
+		hist.at(i) = scale * (float)(hist.at(i)) / total_horiz ;
+		// cout << "\t hist: " << hist.at(i) ;
+	}
+
+	for(int i = image.rows ; i < image.rows + image.cols ; i++)
+	{
+		hist.at(i) = scale * (float)(hist.at(i)) / total_vert ;
+		// cout << "\t hist: " << hist.at(i) ;
+	}
+
+	// cout << "\n total_horiz: " << total_horiz << "\n total_vert: " << total_vert << endl ;
+	// cout << "image type: " << image.type() << endl ;
+	// imshow("image" , image) ;
+	// waitKey(0) ;
+	return hist;
+
+}
+
+
+
+

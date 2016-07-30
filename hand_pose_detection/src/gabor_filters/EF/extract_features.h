@@ -28,4 +28,5 @@ void load_SVM() ;
 Mat extract_features_mat(Mat descriptor, std::vector<float> hog_ders) ;
 void draw_image_histogram(Mat image, double min , double max) ;
 std::vector<float> extract_hog_features(Mat image);
+std::vector<float> extract_oriented_histogram(Mat image) ;
 
