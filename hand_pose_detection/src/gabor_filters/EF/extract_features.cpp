@@ -169,32 +169,40 @@ Mat compute_descriptors(Mat image, std::vector<KeyPoint> keypoints)
 Mat extract_features_mat(Mat descriptor, std::vector<float> hog_ders)
 {
 		int feature_size = descriptor.cols + hog_ders.size() ;
-		double feature_value[feature_size] ;
-		double gamma = 0.05 ;
+		float feature_value[feature_size] ;
+		float gamma = 0.05 ;
 
 		for(int j = 0 ; j < descriptor.cols ; j++)
 		{
 			feature_value[j] = 0 ;
 			for(int h = 0 ; h < descriptor.rows ; h++)
 			{
-				double to_be_added_value = (descriptor.at<double>(h,j)/pow(10,15) ) ;
+				float to_be_added_value = descriptor.at<float>(h,j) ;
 				feature_value[j] += to_be_added_value;
 
-				if(feature_value[j] > 1)
-					feature_value[j] = 1 ;
+				// if(feature_value[j] > 1)
+				// 	feature_value[j] = 1 ;
 			}	
 		}
 
 
+		float max = 0 ;
 		for(int j = 0 ; j < descriptor.cols ; j++)
 		{
 			if(feature_value[j] < 0.1 )
 				feature_value[j] = 0.1 ;
 
-			feature_value[j] = 128 * pow(feature_value[j],gamma) ;
+			feature_value[j] = 1 * pow(feature_value[j],gamma) ;
+
+			if(max < feature_value[j])
+				max = feature_value[j] ;
+
 			if(DEBUG)
 				cout << "feature_value "<< j<<": " << feature_value[j] << endl ; 
 		}
+
+		for(int j =0 ; j < descriptor.cols ; j++)
+			feature_value[j] = feature_value[j] / max ; 
 
 		// double max_hog = 0 , min_hog = 0 ;
 		// for(int j = descriptor.cols ; j < descriptor.cols + hog_ders.size() ; j++)
@@ -218,19 +226,27 @@ Mat extract_features_mat(Mat descriptor, std::vector<float> hog_ders)
 		// 		cout << "feature_value "<< j<<": " << feature_value[j] << endl ; 
 		// }	
 
+		max = 0 ;
 		for(int j = descriptor.cols ; j < descriptor.cols + hog_ders.size() ; j++)
 		{
 			feature_value[j] = hog_ders.at(j - descriptor.cols) ;
+			if(max < feature_value[j])
+				max = feature_value[j] ;
+		}	
+
+		for(int j = descriptor.cols ; j < descriptor.cols + hog_ders.size() ; j++)
+		{
+			feature_value[j] = feature_value[j] / max ; 
 			if(DEBUG)
 				cout << "feature_value "<< j<<": " << feature_value[j] << endl ; 
-		}	
+		}
 
 		Mat result (1,feature_size, CV_32FC1, feature_value) ;
 		
 		if(DEBUG)
 			draw_image_histogram(result, 0 , 128) ;
 
-		return result ;
+		return result.clone() ;
 }
 
 void draw_image_histogram(Mat image, double min, double max)

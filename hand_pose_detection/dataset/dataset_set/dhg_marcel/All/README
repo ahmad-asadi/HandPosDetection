@@ -1,0 +1,15 @@
+# Dr. Sebastien Marcel - IDIAP 2001
+# This directory contains training, evaluation and test files for hand gesture
+# recognition (4 gestures trajectories in 2D)
+# Here is an example :
+
+584 # number of trajectories in the file
+2   # input dimension of a point of a trajectory
+1   # output dimension associated to a point of the trajectory
+2   # number of points of the trajectory
+0.2083 0.2491 0
+0.21375 0.25 0
+3   # number of points of the trajectory
+0.2083 0.2491 1
+0.21375 0.25 1
+......

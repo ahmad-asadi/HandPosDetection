@@ -1,4 +1,4 @@
-# Install script for directory: /home/ahmad/Programs/Programming/Workspace/Vision/hand_pose_detection/src/gabor_filters/sift_models
+# Install script for directory: /home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/sift_models
 
 # Set the install prefix
 IF(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -38,7 +38,7 @@ ELSE(CMAKE_INSTALL_COMPONENT)
   SET(CMAKE_INSTALL_MANIFEST "install_manifest.txt")
 ENDIF(CMAKE_INSTALL_COMPONENT)
 
-FILE(WRITE "/home/ahmad/Programs/Programming/Workspace/Vision/hand_pose_detection/src/gabor_filters/sift_models/build/${CMAKE_INSTALL_MANIFEST}" "")
+FILE(WRITE "/home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/sift_models/build/${CMAKE_INSTALL_MANIFEST}" "")
 FOREACH(file ${CMAKE_INSTALL_MANIFEST_FILES})
-  FILE(APPEND "/home/ahmad/Programs/Programming/Workspace/Vision/hand_pose_detection/src/gabor_filters/sift_models/build/${CMAKE_INSTALL_MANIFEST}" "${file}\n")
+  FILE(APPEND "/home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/sift_models/build/${CMAKE_INSTALL_MANIFEST}" "${file}\n")
 ENDFOREACH(file)

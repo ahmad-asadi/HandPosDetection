@@ -1,1 +1,1 @@
-/home/ahmad/Programs/Programming/Workspace/Vision/hand_pose_detection/src/gabor_filters/build/CMakeFiles/main.dir
+/home/asadi/GIT/Vision/hand_pose_detection/src/gabor_filters/build/CMakeFiles/main.dir

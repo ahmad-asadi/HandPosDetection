@@ -26,6 +26,9 @@ void compute_sift_points();
 void construct_BOW_kmeans(int dictionary_size, int iteration_count, float error_rate, int retries);
 int check_keypoints_file_existance();
 void train_svm(int iteration_count, float error_rate);
+void initialize_CvSVMParams(CvSVMParams *params);
+void initialize_CvParamGrid(CvParamGrid *gamma_grid);
+Mat generate_labels_mat();
 
 ///////////////////////
 struct training_pair
@@ -84,49 +87,76 @@ int main(int argc, char ** argv)
 	write_descriptors();
 }
 
-void train_svm(int iteration_count, float error_rate)
+void initialize_CvSVMParams(CvSVMParams *params)
 {
-	cout << "Start training\nsettting parametres..." << endl ;
-	CvParamGrid gamma_grid ;
-	gamma_grid.min_val = 0.000001 ;
-	gamma_grid.max_val = 110 ;
-	gamma_grid.step = 10 ;
+	params->svm_type = CvSVM::C_SVC ;
+	params->kernel_type = CvSVM::RBF ;
+	params->gamma = 3 ; 
+	params->C = 0.1 ;
+	params->degree = 3 ;
+	params->nu = 0.9 ;
+	params->term_crit = cvTermCriteria(CV_TERMCRIT_ITER, iteration_count, error_rate);
+}
 
-	int k_fold = 10 ;
+void initialize_CvParamGrid(CvParamGrid * gamma_grid)
+{
+	gamma_grid->min_val = 0.000001 ;
+	gamma_grid->max_val = 110 ;
+	gamma_grid->step = 10 ;
+}
 
-	CvSVMParams params ;
-	params.svm_type = CvSVM::C_SVC ;
-	params.kernel_type = CvSVM::RBF ;
-	params.gamma = 3 ; 
-	params.C = 0.1 ;
-	params.degree = 3 ;
-	params.nu = 0.9 ;
-	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, iteration_count, error_rate);
-
+Mat generate_labels_mat()
+{
 	cout << "Creating labels mat for training..." << endl ;
 	int labels_list[labels_mat.size()];
 	for(int i = 0 ; i < labels_mat.size() ; i++)
-	{
 		labels_list[i] = labels_mat.at(i);
-		cout << "final label" << labels_list[i] << endl ;
-	}
-	Mat training_labels_mat(labels_mat.size() , 1 , CV_32S , labels_list) ;
+
+	return Mat(labels_mat.size() , 1 , CV_32S , labels_list).clone() ;
+}
+
+void train_svm(int iteration_count, float error_rate)
+{
+	cout << "Start training\nsettting parametres..." << endl ;
+	int k_fold = 10 ;
+
+	CvParamGrid gamma_grid ;
+	initialize_CvParamGrid(&gamma_grid);
+	CvSVMParams params ;
+	initialize_CvSVMParams(&params) ;
+
+	Mat training_labels_mat = generate_labels_mat() ;
 
 	cout << "Calculating PCA Projection..." << endl ;
-	PCA pca(training_data_mat, Mat(), CV_PCA_DATA_AS_ROW, 0.95) ;
 
-	cout << "training_data_mat.rows: " << training_data_mat.rows << ", training_data_mat.cols: " << training_data_mat.cols << endl ;
-	cout << "Projecting training vectors to eigen space..." << endl ;
-	Mat pca_training_data_mat = pca.project(training_data_mat) ; 
-	cout << "PCA.rows: " << pca_training_data_mat.rows << ", PCA.cols: " << pca_training_data_mat.cols << endl ;
-	cout << "PCA(0,0): " << pca_training_data_mat.at<float>(0,0) << endl ;
-	namedWindow("PCA",WINDOW_AUTOSIZE);
-	imshow("PCA" , pca_training_data_mat) ;
-	waitKey(0) ;
+	// Mat average = Mat();
+	// PCA pca(training_data_mat, average, CV_PCA_DATA_AS_ROW);
 
-	cout << "Training has been started..." << endl;
-	training_svm.train_auto(pca_training_data_mat, training_labels_mat, Mat(), Mat(), params, k_fold, CvSVM::get_default_grid(CvSVM::C), gamma_grid);
-	// training_svm.train_auto(training_data_mat, training_labels_mat, Mat(), Mat(), params, k_fold, CvSVM::get_default_grid(CvSVM::C), gamma_grid);
+	// cout << "checking pca... " << endl ;
+	// cout << pca.eigenvalues << endl ;
+	// cout << pca.eigenvectors << endl ;
+
+	// cout << "training_data_mat.rows: " << training_data_mat.rows << ", training_data_mat.cols: " << training_data_mat.cols << endl ;
+	// cout << "Projecting training vectors to eigen space..." << endl ;
+	// Mat pca_training_data_mat ;
+	// for(int i = 0 ; i < training_data_mat.rows ; i++)
+	// 	pca_training_data_mat.row(i) = (pca.project(training_data_mat.row(i))) + Scalar(0); 
+
+	// // imshow("eigen_value" , training_data_mat.clone()) ;
+	// // moveWindow("eigen_value" , 100,100);
+ // // 	waitKey(0) ;
+
+	// cout << "PCA.rows: " << pca_training_data_mat.rows << ", PCA.cols: " << pca_training_data_mat.cols << endl ;
+	// cout << "PCA(0,0): " << pca_training_data_mat.at<float>(0,0) << endl ;
+	// cout << "labels: " << training_data_mat.rows << " * " << training_labels_mat.cols << endl ;
+	// namedWindow("PCA",WINDOW_AUTOSIZE);
+	// imshow("PCA" , pca_training_data_mat) ;
+	// waitKey(0) ;
+
+	// cout << "Training has been started..." << endl;
+	// training_svm.train(pca_training_data_mat, training_labels_mat, Mat(), Mat(), params);
+	// training_svm.train_auto(pca_training_data_mat, training_labels_mat, Mat(), Mat(), params, k_fold, CvSVM::get_default_grid(CvSVM::C), gamma_grid);
+	training_svm.train_auto(training_data_mat, training_labels_mat, Mat(), Mat(), params, k_fold, CvSVM::get_default_grid(CvSVM::C), gamma_grid);
 
 	cout << "****************************************" << endl ;
 	cout << "training has been finished successfully." << endl ;
@@ -211,7 +241,6 @@ void compute_sift_points()
 
 		Mat descriptor = compute_descriptors(channels[0] , keypoints);
 
-//		_descriptors.push_back(descriptor);
 		training_entities.at(i).descriptor = descriptor;
 
 		if(DEBUG)

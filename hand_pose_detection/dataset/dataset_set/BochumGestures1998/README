@@ -1,0 +1,95 @@
+Data base of static hand gestures, collected at the
+Institut fuer Neuroinformatik, Ruhr-Universitaet Bochum, Germany.
+
+Notes:
+1. All images are 128x128 tiff images. The hand posture is identified
+   by a code "00" to "12" in the filename. The kind of background
+   (light, dark, complex) is indicated by a subsequent letter a, b, or c,
+   respectively.
+
+2. Results with this database are reported in:
+
+   J. Triesch and C. von der Malsburg, (2001).
+   "A System for Person-Independent Hand Posture Recognition
+    against Complex Backgrounds",
+    IEEE PAMI, vol. 23, no. 12, p. 1449-1453.
+
+3. Most files are in a pseudo saturation, intensity, hue format
+   (sih directory), which is different from, say, the equations in
+   the Gonzales&Woods textbook. A few files are in rgb format (rgb directory).
+
+4. To convert SIH to RGB we implemented the following routines, given
+   as c++ pseudo code:
+
+  A. resort the image planes from SIH to HSI
+  ------------------------------------------
+  trivial.
+
+  B. convert to an intermediate R-Y, Y, B-Y color space:
+  ------------------------------------------------------
+
+{
+	unsigned char *p1L = start address of 1st pixel plane;
+	unsigned char *p2L = start address of 2nd pixel plane;
+	unsigned char *p3L = start address of 3rd pixel plane;
+	const double halfMaxValue = 127;
+	const double maxValue = 256;
+	const double RADTOB = 40.58451049;
+	double ry, by, h_helpRoot, h_help, s_help;
+
+	for (int xL=0; xL < xResolution(); xL++)
+		for (int yL=0; yL < yResolution(); yL++)
+		{
+			h_helpRoot = tan (((255.0 - double (*p1L)) / RADTOB) - M_PI);
+			h_help = sqr (h_helpRoot);
+			s_help = sqr (255.0 - double (*p2L));
+			ry = sqrt (s_help / (1 + h_help));
+			by = sqrt (s_help * h_help / (1 + h_help));
+			// sign switch
+			if (h_helpRoot < 0) {
+				if (double (*p1L) < halfMaxValue) {
+					by = maxValue - by;}
+				else {
+					ry = maxValue - ry;}
+				;}
+			else {
+				by = maxValue - by,
+				ry = maxValue - ry;}
+			*p1L++ = rnd (min (max (by, 0.0), 255.0));
+			*p2L++ = *p3L;
+			*p3L++ = rnd (min (max (ry, 0.0), 255.0));
+		}; // of for yL
+}
+
+
+  C. Convert from the R-Y, Y, B-Y color space to RGB:
+  ---------------------------------------------------
+
+
+{
+	unsigned char *p1L = start address of 1st pixel plane;
+	unsigned char *p2L = start address of 2nd pixel plane;
+	unsigned char *p3L = start address of 3rd pixel plane;
+
+	const double halfMaxValue = 127;
+	double ry, y, by;
+	// Matrix according to manual modified by A. Heinrichs
+	const double m[3][3] = {{ 0.000 , 1.000 , 1.402 },
+				{-0.344 , 1.000 ,-0.714 },		
+				{ 1.772 , 1.000 , 0.000 } };
+
+	for (int xL=0; xL < xResolution(); xL++)
+		for (int yL=0; yL < yResolution(); yL++)
+		{
+			//sign switch
+			by = halfMaxValue - double(*p1L);
+			y = double(*p2L);
+			ry = halfMaxValue - double(*p3L);
+			
+			// transforming (R-Y)Y(B-Y) to RGB color space
+			*p1L++ = rnd (min (max ((m[0][0] * by + m[0][1] * y + m[0][2] * ry), 0.0), 255.0));
+			*p2L++ = rnd (min (max ((m[1][0] * by + m[1][1] * y + m[1][2] * ry), 0.0), 255.0));
+			*p3L++ = rnd (min (max ((m[2][0] * by + m[2][1] * y + m[2][2] * ry), 0.0), 255.0));
+		}; // of for yL
+	
+}
